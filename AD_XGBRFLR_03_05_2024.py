@@ -8,6 +8,7 @@ Created on Mon Apr  1 21:30:00 2024
 """
 
 #%% Loading appropriate libraries ===============================================
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -20,9 +21,13 @@ import xgboost as XGBRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import RFE
 
+#%% Loading data ===============================================================
+# Provide the file path
+file_path = 'C:/Users/ADhungana/Desktop/DIGIAG/TG_ALLDATA_05_17_2021.csv'
 
-#%% Loading data ===========================================================
-Ex1 = pd.read_csv('//Users//admin//Desktop//Dig_Ag_Assignment//Data//TG_ALLDATA_05_17_2021.csv')
+# Read the CSV file into a DataFrame
+Ex1 = pd.read_csv(file_path)
+
 
 #%% Removing entries with missing values ==============================
 Ex1_cleaned = Ex1.dropna()
@@ -69,20 +74,27 @@ print("Best RMSE score for Random Forest: ", np.sqrt(-grid_search_rf.best_score_
 regressor = grid_search_rf.best_estimator_
 
 #%% Setting up XGBoost and fitting the dataset
+# Setting up parameter grid
 param_grid_xgb = {
     'n_estimators': [100, 200, 300],
     'learning_rate': [0.05, 0.1, 0.2],
     'max_depth': [3, 4, 5],
 }
 
-grid_search_xgb = GridSearchCV(estimator=XGBRegressor(random_state=0), 
-                               param_grid=param_grid_xgb, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
+# Create an instance of XGBRegressor
+xgb_regressor = xgb.XGBRegressor(random_state=0)
+
+# Initialize GridSearchCV with the XGBRegressor instance and parameter grid
+grid_search_xgb = GridSearchCV(estimator=xgb_regressor, 
+                               param_grid=param_grid_xgb, cv=5, 
+                               scoring='neg_mean_squared_error', n_jobs=-1)
+
+# Fit the GridSearchCV object to your data
 grid_search_xgb.fit(X_train, y_train)
 
-print("Best parameters for XGBoost: ", grid_search_xgb.best_params_)
-print("Best RMSE score for XGBoost: ", np.sqrt(-grid_search_xgb.best_score_))
-
-xgb_regressor = grid_search_xgb.best_estimator_
+# Retrieve the best parameters
+best_params_xgb = grid_search_xgb.best_params_
+print(best_params_xgb)
 
 #%% Training the Random Forest model
 regressor.fit(X_train, y_train)  
@@ -113,21 +125,12 @@ print('Mean Squared Error for XGBoost:', metrics.mean_squared_error(y_test, y_pr
 print('Root Mean Squared Error for XGBoost:', np.sqrt(metrics.mean_squared_error(y_test, y_pred_xgb)))
 
 #%% ==== Create empty lists to store errors for 3 models(initialization)
-#%% ==== Create empty lists to store errors for 3 models (initialization)
-rf_errors = []
-regr_errors = []
-xgb_on_rf_errors = []
-xgb_on_lr_errors = []
-
-#%% ==== Create 150 repetitions
-for i in range(150):
-   #%% ==== Create empty lists to store errors for 3 models (initialization)
 rf_errors = []
 regr_errors = []
 xgb_errors = []
 
-#%% ==== Create 150 repetitions
-for i in range(150):
+#%% ==== Create 100 repetitions
+for i in range(100):
     # Simple train test split with 80-20
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True)
     # Standardize input variables
@@ -158,7 +161,7 @@ for i in range(150):
 
 #%% ==== Combine three error arrays, clean up and select 100 repetitions at random, save as csv
 Result_errors1 = pd.DataFrame({'Random_Forest': rf_errors, "Linear_Regression": regr_errors, "XGBoost": xgb_errors})
-Result_errors2 = Result_errors1[Result_errors1["Linear_Regression"] < 150]
+Result_errors2 = Result_errors1[Result_errors1["Linear_Regression"] < 100]
 Result_errors3 = Result_errors2.sample(n=100, random_state=0)  # Selecting 100 random rows
 Result_errors3.to_csv('//Users//admin//Desktop//Dig_Ag_Assignment//Data//Errors.csv')
 
@@ -209,7 +212,13 @@ axes[1].set_title('RMSE for Linear Regression with XGBoost')
 plt.tight_layout()
 plt.savefig('//Users//admin//Desktop//Dig_Ag_Assignment//XGB_on_RF_vs_LR_Side_by_Side.png')
 
+#%% Computes best parameters and the corresponding regressor
+best_params_rf = grid_search_rf.best_params_
+df_rf = pd.DataFrame([best_params_rf])
+rf_best_param_path = "//path//to//save//rf_best_param.csv"
+df_rf.to_csv(rf_best_param_path, index=False)
 
-
-###In summary, the first set of boxplots compares the performance of Random Forest and Linear Regression models directly, while the second set of boxplots compares the performance of XGBoost models applied to Random Forest and Linear Regression.
-
+best_params_xgb = grid_search_xgb.best_params_
+df_xgb = pd.DataFrame([best_params_xgb])
+xgb_best_param_path = "//path//to//save//xgb_best_param.csv"
+df_xgb.to_csv(xgb_best_param_path, index=False)
